@@ -2,11 +2,6 @@ pipeline {
 
     agent any
 
-    tools {
-        maven 'maven'
-        jdk 'JDK'
-    }
-
     environment {
         GITHUB_CREDS = credentials('github-package-creds')
     }
@@ -29,7 +24,7 @@ pipeline {
                 ) {
                     bat """
                         echo ========================================
-                        echo       BUILDING MAVEN PROJECT
+                        echo       BUILDING AND DEPLOYING
                         echo ========================================
 
                         mvn -B clean deploy -s "%MAVEN_SETTINGS%"
@@ -41,7 +36,7 @@ pipeline {
 
     post {
         success {
-            echo 'Build and deployment to GitHub Packages completed successfully.'
+            echo 'Build and deployment completed successfully.'
         }
 
         failure {
