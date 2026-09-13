@@ -1,10 +1,14 @@
 pipeline {
+
     agent any
 
+    tools {
+        maven 'maven'
+        jdk 'JDK'
+    }
+
     environment {
-        GITHUB_CREDS = credentials('github-packages-cred')
-        MAVEN_HOME   = tool name: 'maven'
-        PATH         = "${JAVA_HOME}\\bin;${PATH}"
+        GITHUB_CREDS = credentials('github-package-creds')
     }
 
     stages {
@@ -17,26 +21,19 @@ pipeline {
 
         stage('Build & Deploy') {
             steps {
-                configFileProvider([
-                    configFile(
-                        fileId: 'maven-github-settings',
+                configFileProvider(
+                    [configFile(
+                        fileId: 'MyGlobalSettings',
                         variable: 'MAVEN_SETTINGS'
-                    )
-                ]) {
-                    bat '''
+                    )]
+                ) {
+                    bat """
                         echo ========================================
-                        echo        BUILDING MAVEN PROJECT
-                        echo ========================================
-
-                        "%MAVEN_HOME%\\bin\\mvn.cmd" -s "%MAVEN_SETTINGS%" -B clean package
-
-                        echo.
-                        echo ========================================
-                        echo       DEPLOYING TO GITHUB PACKAGES
+                        echo       BUILDING MAVEN PROJECT
                         echo ========================================
 
-                        "%MAVEN_HOME%\\bin\\mvn.cmd" -s "%MAVEN_SETTINGS%" -B deploy
-                    '''
+                        mvn -B clean deploy -s "%MAVEN_SETTINGS%"
+                    """
                 }
             }
         }
@@ -44,11 +41,11 @@ pipeline {
 
     post {
         success {
-            echo "Build and deployment to GitHub Packages completed successfully."
+            echo 'Build and deployment to GitHub Packages completed successfully.'
         }
 
         failure {
-            echo "Pipeline failed. Check the console output for details."
+            echo 'Build or deployment failed.'
         }
     }
 }
