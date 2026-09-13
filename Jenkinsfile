@@ -1,9 +1,9 @@
 pipeline {
-
     agent any
 
     environment {
-        GITHUB_CREDS = credentials('github-package-creds')
+        MAVEN_HOME = tool name: 'maven'
+        PATH = "${JAVA_HOME}\\bin;${PATH}"
     }
 
     stages {
@@ -16,19 +16,38 @@ pipeline {
 
         stage('Build & Deploy') {
             steps {
-                configFileProvider(
-                    [configFile(
-                        fileId: 'MyGlobalSettings',
-                        variable: 'MAVEN_SETTINGS'
-                    )]
-                ) {
-                    bat """
-                        echo ========================================
-                        echo       BUILDING AND DEPLOYING
-                        echo ========================================
 
-                        mvn -B clean deploy -s "%MAVEN_SETTINGS%"
-                    """
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'github-packages-cred',
+                        usernameVariable: 'GH_USER',
+                        passwordVariable: 'GH_TOKEN'
+                    )
+                ]) {
+
+                    configFileProvider([
+                        configFile(
+                            fileId: 'maven-github-settings',
+                            variable: 'MAVEN_SETTINGS'
+                        )
+                    ]) {
+
+                        bat '''
+                            echo ========================================
+                            echo       BUILDING AND DEPLOYING
+                            echo ========================================
+
+                            "%MAVEN_HOME%\\bin\\mvn.cmd" ^
+                                -s "%MAVEN_SETTINGS%" ^
+                                -B ^
+                                clean deploy
+
+                            echo.
+                            echo ========================================
+                            echo          DEPLOY COMPLETED
+                            echo ========================================
+                        '''
+                    }
                 }
             }
         }
@@ -36,11 +55,11 @@ pipeline {
 
     post {
         success {
-            echo 'Build and deployment completed successfully.'
+            echo 'Build and deployment to GitHub Packages completed successfully.'
         }
 
         failure {
-            echo 'Build or deployment failed.'
+            echo 'Pipeline failed. Check the console output for details.'
         }
     }
 }
